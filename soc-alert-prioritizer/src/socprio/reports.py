@@ -16,13 +16,42 @@ PRIORITY_COLORS = {"critical": "#e5484d", "high": "#f76b15", "medium": "#ffc53d"
 PRIORITY_ORDER = ["critical", "high", "medium", "low"]
 
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _neutralize(value: object) -> object:
+    """Stop spreadsheet apps from evaluating attacker-supplied cells (CWE-1236)."""
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
+def to_safe_csv(frame: pd.DataFrame) -> str:
+    safe = frame.sort_values("risk_score", ascending=False).copy()
+    for column in safe.select_dtypes(include=["object", "string"]).columns:
+        safe[column] = safe[column].map(_neutralize)
+    return safe.to_csv(index=False)
+
+
 def export_csv(store: AlertStore, path: str | Path, hours: int = 24) -> int:
     frame = store.frame(datetime.now(timezone.utc) - timedelta(hours=hours))
-    frame.sort_values("risk_score", ascending=False).to_csv(path, index=False)
+    Path(path).write_text(to_safe_csv(frame), encoding="utf-8")
     return len(frame)
 
 
-def build_html_report(store: AlertStore, hours: int = 24) -> str:
+def _esc(value: object) -> str:
+    """Every value in the report may come from log content - escape all of it."""
+    if value is None or (isinstance(value, float) and value != value):
+        return ""
+    return html.escape(str(value), quote=True)
+
+
+def build_html_report(store: AlertStore, hours: int = 24, plotly_src: str = "cdn") -> str:
+    """Render the shift report.
+
+    ``plotly_src`` is ``"cdn"`` for standalone files or a local URL such as
+    ``/vendor/plotly.min.js`` when served by the web app.
+    """
     now = datetime.now(timezone.utc)
     frame = store.frame(now - timedelta(hours=hours))
     stats = store.stats(hours)
@@ -55,16 +84,17 @@ def build_html_report(store: AlertStore, hours: int = 24) -> str:
         for fig in figures:
             fig.update_layout(template="plotly_white", margin={"t": 50, "l": 10, "r": 10})
         charts = "".join(
-            pio.to_html(fig, full_html=False, include_plotlyjs="cdn" if i == 0 else False)
+            pio.to_html(fig, full_html=False, include_plotlyjs=plotly_src if i == 0 else False)
             for i, fig in enumerate(figures)
         )
         top = frame.sort_values("risk_score", ascending=False).head(25)
         table_rows = "".join(
             "<tr>"
-            f"<td>{r.last_seen:%Y-%m-%d %H:%M}</td><td>{html.escape(r.alert_type)}</td>"
-            f"<td>{html.escape(str(r.signature or ''))}</td><td>{r.src_ip or ''}</td>"
-            f"<td>{r.dst_ip or ''}</td><td>{r.occurrences}</td><td>{r.risk_score}</td>"
-            f"<td class='p-{r.priority}'>{r.priority}</td><td>{r.status}</td>"
+            f"<td>{r.last_seen:%Y-%m-%d %H:%M}</td><td>{_esc(r.alert_type)}</td>"
+            f"<td>{_esc(r.signature)}</td><td>{_esc(r.src_ip)}</td>"
+            f"<td>{_esc(r.dst_ip)}</td><td>{int(r.occurrences)}</td>"
+            f"<td>{int(r.risk_score)}</td>"
+            f"<td class='p-{_esc(r.priority)}'>{_esc(r.priority)}</td><td>{_esc(r.status)}</td>"
             "</tr>"
             for r in top.itertuples()
         )
