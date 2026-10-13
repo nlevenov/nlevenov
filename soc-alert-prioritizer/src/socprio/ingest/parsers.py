@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Iterable, Iterator
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -155,10 +155,15 @@ def parse_authlog(line: str, year: int | None = None) -> Alert | None:
         return None
     ts_text, host, msg = match.group("ts"), match.group("host"), match.group("msg")
     if ts_text[0].isalpha():
-        # syslog timestamps have no year
-        ts_text = f"{ts_text.split()[0]} {ts_text.split()[1]} {year or datetime.now().year} " \
-                  f"{ts_text.split()[2]}"
-    timestamp = parse_timestamp(ts_text)
+        # syslog timestamps have no year; a December line read in January
+        # belongs to last year, not eleven months in the future
+        month, day, clock = ts_text.split()
+        now = datetime.now(timezone.utc)
+        timestamp = parse_timestamp(f"{month} {day} {year or now.year} {clock}")
+        if year is None and timestamp > now + timedelta(days=1):
+            timestamp = timestamp.replace(year=timestamp.year - 1)
+    else:
+        timestamp = parse_timestamp(ts_text)
 
     if failed := _AUTH_FAILED.search(msg):
         return Alert(
