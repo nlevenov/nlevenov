@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SOC Alert Prioritizer{% endblock %}</title>
+  <link rel="icon" href="{{ url_for('static', path='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/" style="color: inherit; text-decoration: none">
+    <img src="{{ url_for('static', path='logo.svg') }}" alt="" width="26" height="26">
+    SOC Alert Prioritizer
+  </a>
+  <div class="controls">{% block controls %}{% endblock %}</div>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<div class="toast" id="toast"></div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

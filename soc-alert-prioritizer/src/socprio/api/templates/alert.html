@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}{{ alert.alert_type }} - {{ alert.id }}{% endblock %}
+{% block controls %}<a href="/"><button>&larr; Back to queue</button></a>{% endblock %}
+{% block content %}
+<div class="alert-head">
+  <span class="badge {{ alert.priority.value }}">{{ alert.priority.value }}</span>
+  <span class="big-score">{{ alert.risk_score }}</span>
+  <div>
+    <h1>{{ alert.signature or alert.alert_type }}</h1>
+    <div class="status">{{ alert.alert_type }} &middot; {{ alert.source }} &middot;
+      <span class="mono">{{ alert.id }}</span> &middot; {{ alert.status.value.replace('_', ' ') }}
+      {% if alert.verdict %}&middot; verdict: {{ alert.verdict.value.replace('_', ' ') }}{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid detail">
+  <div class="grid" style="margin-top: 0">
+    <section class="panel">
+      <h2>Why this score</h2>
+      <div class="breakdown">
+        {% for name, value in alert.score_breakdown.items() %}
+        <div class="row">
+          <span>{{ name }}</span>
+          <div class="track"><span class="{{ 'neg' if value < 0 else '' }}"
+               style="width: {{ [value|abs, 100]|min }}%"></span></div>
+          <span class="mono">{{ '%+.1f'|format(value) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% if alert.ml_probability is not none %}
+      <p class="muted">Model estimates a {{ (alert.ml_probability * 100)|round|int }}% chance this is a true positive.</p>
+      {% endif %}
+      {% if alert.rule_hits %}
+      <h2 style="margin-top: 14px">Matched rules</h2>
+      {% for hit in alert.rule_hits %}<div class="tag">{{ hit }}</div>{% endfor %}
+      {% endif %}
+      {% if alert.tags %}
+      <h2 style="margin-top: 14px">Tags</h2>
+      {% for tag in alert.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2>Event</h2>
+      <dl class="fields">
+        <dt>First seen</dt><dd>{{ alert.first_seen.strftime('%Y-%m-%d %H:%M:%S') }} UTC</dd>
+        <dt>Last seen</dt><dd>{{ alert.last_seen.strftime('%Y-%m-%d %H:%M:%S') }} UTC</dd>
+        <dt>Occurrences</dt><dd>{{ alert.occurrences }}</dd>
+        <dt>Vendor severity</dt><dd>{{ alert.severity }} / 10</dd>
+        {% for label, value in [('Source', alert.src_ip ~ (':' ~ alert.src_port if alert.src_port else '') if alert.src_ip else None),
+                                ('Destination', alert.dst_ip ~ (':' ~ alert.dst_port if alert.dst_port else '') if alert.dst_ip else None),
+                                ('Protocol', alert.protocol), ('Host', alert.hostname),
+                                ('User', alert.username), ('Domain', alert.domain),
+                                ('URL', alert.url), ('File hash', alert.file_hash)] if value %}
+        <dt>{{ label }}</dt><dd class="mono">{{ value }}</dd>
+        {% endfor %}
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>Threat intelligence</h2>
+      {% if alert.intel %}
+      <div class="table-wrap"><table>
+        <thead><tr><th>Provider</th><th>Indicator</th><th>Score</th><th>Tags</th><th>Details</th></tr></thead>
+        <tbody>
+        {% for hit in alert.intel %}
+          <tr><td>{{ hit.provider }}</td><td class="mono">{{ hit.indicator }}</td>
+              <td>{{ hit.score }}</td><td>{% for t in hit.tags %}<span class="tag">{{ t }}</span>{% endfor %}</td>
+              <td>{{ hit.description }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}
+      <p class="muted">No threat intelligence matches for the indicators in this alert.</p>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2>Related alerts from {{ alert.src_ip or 'this source' }}</h2>
+      {% if related %}
+      <div class="table-wrap"><table>
+        <tbody>
+        {% for r in related %}
+          <tr class="clickable" onclick="location='/alerts/{{ r.id }}'">
+            <td>{{ r.last_seen.strftime('%m-%d %H:%M') }}</td>
+            <td><span class="badge {{ r.priority.value }}">{{ r.priority.value }}</span></td>
+            <td>{{ r.risk_score }}</td><td>{{ r.alert_type }}</td><td class="sig">{{ r.signature }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<p class="muted">Nothing else from this source.</p>{% endif %}
+    </section>
+
+    <section class="panel">
+      <h2>Raw event</h2>
+      <pre class="raw">{{ alert.raw|tojson(indent=2) }}</pre>
+    </section>
+  </div>
+
+  <div class="grid" style="margin-top: 0">
+    <section class="panel">
+      <h2>Triage</h2>
+      <form id="triage" data-id="{{ alert.id }}">
+        <div class="form-row">
+          <select name="status" aria-label="Status">
+            {% for s in statuses %}
+            <option value="{{ s.value }}" {{ 'selected' if s == alert.status }}>{{ s.value.replace('_', ' ') }}</option>
+            {% endfor %}
+          </select>
+          <select name="verdict" aria-label="Verdict">
+            <option value="">No verdict</option>
+            {% for v in verdicts %}
+            <option value="{{ v.value }}" {{ 'selected' if v == alert.verdict }}>{{ v.value.replace('_', ' ') }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <textarea name="notes" placeholder="Analyst notes...">{{ alert.notes }}</textarea>
+        {% if api_key_required %}
+        <div class="form-row" style="margin-top: 8px">
+          <input type="text" name="api_key" placeholder="API key" autocomplete="off">
+        </div>
+        {% endif %}
+        <div class="form-row" style="margin-top: 8px"><button class="primary" type="submit">Save</button></div>
+      </form>
+      <p class="muted">Verdicts are used as training labels the next time the model is retrained.</p>
+    </section>
+
+    {% if alert.asset %}
+    <section class="panel">
+      <h2>Affected asset</h2>
+      <dl class="fields">
+        <dt>Name</dt><dd>{{ alert.asset.name }}</dd>
+        <dt>Criticality</dt><dd>{{ alert.asset.criticality }} / 5</dd>
+        {% if alert.asset.owner %}<dt>Owner</dt><dd>{{ alert.asset.owner }}</dd>{% endif %}
+        {% if alert.asset.tags %}<dt>Tags</dt><dd>{% for t in alert.asset.tags %}<span class="tag">{{ t }}</span>{% endfor %}</dd>{% endif %}
+      </dl>
+    </section>
+    {% endif %}
+
+    <section class="panel">
+      <h2>Response playbook</h2>
+      <ol class="playbook">{% for step in playbook %}<li>{{ step }}</li>{% endfor %}</ol>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='alert.js') }}"></script>
+{% endblock %}

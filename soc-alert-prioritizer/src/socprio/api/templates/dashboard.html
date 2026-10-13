@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="/vendor/plotly.min.js" charset="utf-8"></script>
+{% endblock %}
+{% block controls %}
+  <span class="pill {{ 'on' if model else '' }}" title="ML classifier status">
+    <span class="dot"></span>{{ 'ML model loaded' if model else 'Rules only (no model)' }}
+  </span>
+  <select id="window" aria-label="Time window">
+    <option value="1">Last hour</option>
+    <option value="24" selected>Last 24 hours</option>
+    <option value="168">Last 7 days</option>
+    <option value="720">Last 30 days</option>
+  </select>
+  <label class="pill"><input type="checkbox" id="autorefresh" checked> Auto-refresh</label>
+  <a href="/api/report.html" id="report-link" target="_blank"><button>Report</button></a>
+  <a href="/api/report.csv" id="csv-link"><button>CSV</button></a>
+{% endblock %}
+{% block content %}
+<section class="kpis">
+  <div class="kpi critical"><div class="label">Critical</div><div class="value" id="k-critical">-</div></div>
+  <div class="kpi high"><div class="label">High</div><div class="value" id="k-high">-</div></div>
+  <div class="kpi medium"><div class="label">Medium</div><div class="value" id="k-medium">-</div></div>
+  <div class="kpi low"><div class="label">Low</div><div class="value" id="k-low">-</div></div>
+  <div class="kpi"><div class="label">Open alerts</div><div class="value" id="k-open">-</div></div>
+  <div class="kpi"><div class="label">Raw events</div><div class="value" id="k-events">-</div></div>
+  <div class="kpi"><div class="label">Noise reduction</div><div class="value" id="k-noise">-</div></div>
+</section>
+
+<section class="grid charts">
+  <div class="panel"><h2>Alert timeline</h2><div id="chart-timeline" class="chart"></div></div>
+  <div class="panel"><h2>Alert types</h2><div id="chart-types" class="chart"></div></div>
+  <div class="panel">
+    <h2>Top offending sources</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Source IP</th><th>Alerts</th><th>Max score</th></tr></thead>
+      <tbody id="top-sources"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="panel" style="margin-top: 12px">
+  <div class="toolbar">
+    <h2 style="margin: 0 8px 0 0">Alert queue</h2>
+    <button class="chip" data-p="critical">critical</button>
+    <button class="chip" data-p="high">high</button>
+    <button class="chip" data-p="medium">medium</button>
+    <button class="chip" data-p="low">low</button>
+    <select id="status-filter" aria-label="Status">
+      <option value="open" selected>Open</option>
+      <option value="">All statuses</option>
+      <option value="new">New</option>
+      <option value="investigating">Investigating</option>
+      <option value="monitoring">Monitoring</option>
+      <option value="closed">Closed</option>
+      <option value="false_positive">False positive</option>
+    </select>
+    <select id="sort" aria-label="Sort">
+      <option value="risk">Highest risk</option>
+      <option value="recent">Most recent</option>
+    </select>
+    <span class="spacer"></span>
+    <input type="search" id="search" placeholder="Search IP, host, user, signature..." size="32">
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Last seen</th><th>Priority</th><th>Risk</th><th>Type</th><th>Signature</th>
+        <th>Source</th><th>Destination</th><th>Count</th><th>Status</th>
+      </tr></thead>
+      <tbody id="alerts"></tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <span id="page-info"></span>
+    <span><button id="prev">Previous</button> <button id="next">Next</button></span>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='dashboard.js') }}"></script>
+{% endblock %}
