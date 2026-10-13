@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import signal
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -70,9 +71,14 @@ def cmd_ingest(args: argparse.Namespace, settings: Settings) -> int:
         if args.show:
             print()
             print_alerts(result.alerts, args.show)
+    pipeline.close()
     if total_skipped:
         print(f"skipped {total_skipped} records that were not alerts or could not be parsed")
     return 0
+
+
+def _raise_interrupt(signum: int, frame: object) -> None:
+    raise KeyboardInterrupt
 
 
 def cmd_watch(args: argparse.Namespace, settings: Settings) -> int:
@@ -84,43 +90,55 @@ def cmd_watch(args: argparse.Namespace, settings: Settings) -> int:
         return 2
     pipeline = Pipeline.from_settings(settings)
     path = Path(args.path)
+    min_rank = Priority(args.min_priority).rank
     print(f"watching {path} ({args.format}), flushing every {args.interval}s - Ctrl+C to stop")
+
+    # SIGTERM (docker stop, systemd) should flush like Ctrl+C does.
+    signal.signal(signal.SIGTERM, _raise_interrupt)
 
     position = 0 if args.from_start or not path.exists() else path.stat().st_size
     inode = path.stat().st_ino if path.exists() else None
     buffer: list[Alert] = []
     last_flush = time.monotonic()
+
+    def flush() -> None:
+        nonlocal buffer, last_flush
+        result = pipeline.process(buffer)
+        buffer = []
+        last_flush = time.monotonic()
+        for alert in result.alerts:
+            if alert.priority.rank < min_rank:
+                continue
+            label = _color(f"{alert.priority.value.upper():<8}", alert.priority.value)
+            print(f"{alert.last_seen:%H:%M:%S}  {label}  {alert.risk_score:>3}  "
+                  f"{alert.alert_type:<18} {alert.src_ip or '-':<15} "
+                  f"{alert.signature[:60]}", flush=True)
+
     try:
         while True:
             if path.exists():
                 stat = path.stat()
                 if stat.st_ino != inode or stat.st_size < position:  # rotated or truncated
                     inode, position = stat.st_ino, 0
-                with path.open(encoding="utf-8", errors="replace") as fh:
+                # binary mode: offsets are byte counts even with invalid UTF-8
+                with path.open("rb") as fh:
                     fh.seek(position)
-                    for line in fh:
-                        if not line.endswith("\n"):
+                    for raw_line in fh:
+                        if not raw_line.endswith(b"\n"):
                             break  # partial write, pick it up next round
-                        position += len(line.encode("utf-8"))
-                        alert = parse_record(line, args.format)
+                        position += len(raw_line)
+                        alert = parse_record(raw_line.decode("utf-8", "replace"), args.format)
                         if alert:
                             buffer.append(alert)
             if buffer and (time.monotonic() - last_flush >= args.interval or len(buffer) >= 500):
-                result = pipeline.process(buffer)
-                buffer = []
-                for alert in result.alerts:
-                    if alert.priority.rank < Priority(args.min_priority).rank:
-                        continue
-                    label = _color(f"{alert.priority.value.upper():<8}", alert.priority.value)
-                    print(f"{alert.last_seen:%H:%M:%S}  {label}  {alert.risk_score:>3}  "
-                          f"{alert.alert_type:<18} {alert.src_ip or '-':<15} "
-                          f"{alert.signature[:60]}")
-                last_flush = time.monotonic()
+                flush()
             time.sleep(0.5)
     except KeyboardInterrupt:
         if buffer:
-            pipeline.process(buffer)
+            flush()
         print("\nstopped")
+    finally:
+        pipeline.close()
     return 0
 
 
@@ -141,7 +159,9 @@ def cmd_elastic(args: argparse.Namespace, settings: Settings) -> int:
         return 1
     finally:
         collector.close()
-    result = Pipeline.from_settings(settings).process(alerts)
+    pipeline = Pipeline.from_settings(settings)
+    result = pipeline.process(alerts)
+    pipeline.close()
     _summary(result)
     return 0
 
@@ -187,7 +207,7 @@ def cmd_train(args: argparse.Namespace, settings: Settings) -> int:
             return 2
         alerts, labels = _load_labelled(args)
         classifier, report = train_from_alerts(alerts, settings, labels)
-    classifier.save(settings.model_path)
+    classifier.save(settings.model_path, signing_key=settings.model_signing_key)
     print(f"model saved to {settings.model_path}")
     print(json.dumps(report.as_dict(), indent=2))
     print("most influential features:")
@@ -223,15 +243,34 @@ def cmd_evaluate(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
 def cmd_serve(args: argparse.Namespace, settings: Settings) -> int:
     import uvicorn
 
     from .api import create_app
+    from .api.security import validate_api_key
     from .pipeline import Pipeline
 
-    pipeline = Pipeline.from_settings(settings, dashboard_url=f"http://{args.host}:{args.port}")
-    uvicorn.run(create_app(settings, pipeline), host=args.host, port=args.port,
-                log_level="info")
+    try:
+        validate_api_key(settings.api_key)
+    except ValueError as exc:
+        print(f"error: {exc}")
+        return 2
+    if args.host not in LOOPBACK_HOSTS and not settings.api_key:
+        print(f"error: refusing to serve on {args.host} without authentication. "
+              "Set SOCPRIO_API_KEY (and allowed_hosts) or bind to 127.0.0.1.")
+        return 2
+
+    pipeline = Pipeline.from_settings(settings, dashboard_url=args.public_url or "")
+    try:
+        uvicorn.run(create_app(settings, pipeline), host=args.host, port=args.port,
+                    log_level="info", proxy_headers=args.behind_proxy,
+                    forwarded_allow_ips="*" if args.behind_proxy else None,
+                    server_header=False)
+    finally:
+        pipeline.close()
     return 0
 
 
@@ -279,7 +318,7 @@ def cmd_demo(args: argparse.Namespace, settings: Settings) -> int:
                if (a := parse_generic(r))]
     print(f"training on {len(history)} historical events...")
     classifier, report = train_from_alerts(history, settings)
-    classifier.save(settings.model_path)
+    classifier.save(settings.model_path, signing_key=settings.model_signing_key)
     print(f"model ready: f1={report.f1} roc_auc={report.roc_auc}")
 
     today = [a for r in generate(args.count, seed=int(time.time()) % 10_000)
@@ -287,7 +326,9 @@ def cmd_demo(args: argparse.Namespace, settings: Settings) -> int:
     for alert in today:
         alert.raw.pop("label", None)
         alert.raw.pop("scenario", None)
-    result = Pipeline.from_settings(settings).process(today)
+    pipeline = Pipeline.from_settings(settings)
+    result = pipeline.process(today)
+    pipeline.close()
     _summary(result)
     print()
     print_alerts(result.alerts, 10)
@@ -357,6 +398,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("serve", help="run the API and dashboard")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--public-url", help="external URL used for links in notifications")
+    p.add_argument("--behind-proxy", action="store_true",
+                   help="trust X-Forwarded-* headers from a TLS-terminating reverse proxy")
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("report", help="write an HTML or CSV report")
@@ -374,6 +418,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-n", "--count", type=int, default=1500)
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--public-url")
+    p.add_argument("--behind-proxy", action="store_true")
     p.add_argument("--no-serve", action="store_true")
     p.set_defaults(func=cmd_demo)
     return parser
@@ -383,7 +429,11 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    settings = load_settings(args.config)
+    try:
+        settings = load_settings(args.config)
+    except (OSError, ValueError, TypeError) as exc:
+        print(f"error: invalid configuration: {exc}")
+        return 2
     if args.command == "evaluate" and not (args.data or args.cicids):
         print("pass --data FILE or --cicids FILE")
         return 2
