@@ -1,0 +1,51 @@
+# Asset inventory. Criticality: 1 (lab / guest) .. 5 (crown jewels).
+# Match by IP/CIDR or hostname glob; the most critical match wins.
+assets:
+  - name: Domain controller
+    criticality: 5
+    owner: infrastructure
+    ips: [10.0.0.10/32]
+    hostnames: ["dc*"]
+    tags: [identity, tier0]
+
+  - name: Production database
+    criticality: 5
+    owner: data-platform
+    ips: [10.0.1.20/32]
+    hostnames: ["sql-prod*"]
+    tags: [pii, tier0]
+
+  - name: Public web server
+    criticality: 4
+    owner: web-team
+    ips: [10.0.1.30/32]
+    hostnames: ["web*"]
+    tags: [internet-facing]
+
+  - name: File server
+    criticality: 4
+    owner: infrastructure
+    ips: [10.0.1.40/32]
+    hostnames: ["files*"]
+
+  - name: SSH jump host
+    criticality: 4
+    owner: infrastructure
+    ips: [10.0.1.50/32]
+    hostnames: ["jump*"]
+    tags: [internet-facing, admin-access]
+
+  - name: Server VLAN
+    criticality: 3
+    ips: [10.0.1.0/24]
+
+  - name: Vulnerability scanner
+    criticality: 1
+    owner: security
+    ips: [10.0.5.5/32]
+    tags: [scanner]
+
+  - name: Workstations
+    criticality: 2
+    ips: [10.0.10.0/23]
+    hostnames: ["wks-*"]

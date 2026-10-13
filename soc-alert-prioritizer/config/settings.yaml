@@ -1,0 +1,64 @@
+# socprio configuration. Values like ${NAME} or ${NAME:-default} are read from
+# the environment so secrets never have to be committed.
+
+database: ${SOCPRIO_DATABASE:-var/socprio.db}
+model_path: models/classifier.joblib
+rules_path: config/rules.yaml
+assets_path: config/assets.yaml
+
+# Address space owned by the organisation. Internal IPs are never sent to
+# external reputation services.
+internal_networks:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+
+# Repeats of the same alert (same source, signature, src and dst) inside this
+# window are merged into one alert with an occurrence counter.
+dedup_window_minutes: 30
+
+# Required as X-API-Key on write endpoints when set.
+api_key: ${SOCPRIO_API_KEY:-}
+
+scoring:
+  # base score = weighted blend of these factors (re-normalized when the ML
+  # model is not trained yet)
+  weights:
+    severity: 35
+    asset: 20
+    ml: 45
+  # threat intel closes up to this share of the gap between base and 100
+  intel_weight: 0.7
+  volume_bonus_max: 10
+  thresholds:
+    critical: 80
+    high: 60
+    medium: 40
+
+intel:
+  feeds_dir: feeds
+  cache_ttl_hours: 24
+  timeout_seconds: 8
+  misp:
+    enabled: ${MISP_ENABLED:-false}
+    url: ${MISP_URL:-}
+    api_key: ${MISP_API_KEY:-}
+    verify_tls: true
+  abuseipdb:
+    enabled: ${ABUSEIPDB_ENABLED:-false}
+    api_key: ${ABUSEIPDB_API_KEY:-}
+  virustotal:
+    enabled: ${VIRUSTOTAL_ENABLED:-false}
+    api_key: ${VIRUSTOTAL_API_KEY:-}
+
+notify:
+  # Slack / Mattermost / Teams incoming webhook
+  webhook_url: ${SOCPRIO_WEBHOOK_URL:-}
+  min_priority: critical
+
+elastic:
+  url: ${ELASTIC_URL:-http://localhost:9200}
+  index: ${ELASTIC_INDEX:-alerts-*}
+  username: ${ELASTIC_USERNAME:-}
+  password: ${ELASTIC_PASSWORD:-}
+  verify_tls: true

@@ -1,0 +1,63 @@
+indicator,type,score,tags,description
+203.0.113.10,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.11,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.12,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.13,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.14,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.15,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.16,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.17,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.18,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.19,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.20,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.21,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.22,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.23,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.24,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.25,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.26,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.27,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.28,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.29,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.30,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.31,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.32,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.33,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.34,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.35,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.36,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.37,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.38,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.39,ip,85,c2;botnet,Known C2 infrastructure
+203.0.113.40/29,ip,75,scanner;bruteforce,Aggressive SSH scanners
+cdn-update.badcdn.test,domain,90,phishing;malware,Malicious domain
+login-micros0ft-support.test,domain,90,phishing;malware,Malicious domain
+pay-portal-verify.test,domain,90,phishing;malware,Malicious domain
+x9f3kq2lz.dyn-dns.test,domain,90,phishing;malware,Malicious domain
+files-share-secure.test,domain,90,phishing;malware,Malicious domain
+telemetry-svc.badcdn.test,domain,90,phishing;malware,Malicious domain
+035ef85706c4e9f4c2ee66f6d928c1d0ed5df28d048db08b0b55b9bebd7af5c8,sha256,95,malware,Known malware sample
+f88aee4935de3d79f26148689056c85ed4e140110e00343a19e08468e28ead14,sha256,95,malware,Known malware sample
+9247a5d98d23e45b3a164960645b3040cad29b8b8ed2724c74624807fd9e1e4f,sha256,95,malware,Known malware sample
+58f640c679974014aabd0c9db033b9f0f00620329397fc31e5de1c3a2e6ebbb9,sha256,95,malware,Known malware sample
+34a6dca00c93737caa90c076fab76f5f43a6f0ea6170a961491253cb7f3a9397,sha256,95,malware,Known malware sample
+b0ea86a495d7478db7c6320689225281f314f8162ea5deb0b561612143a4e305,sha256,95,malware,Known malware sample
+c5552c25d6c5fba1fae77a00155122fafc41c22e997a4db6ddef7d8d2dc24630,sha256,95,malware,Known malware sample
+3c610a9f21e7fd66f00a205d2b048ef39bb14cd97137819d5e33d5479ae2586a,sha256,95,malware,Known malware sample
+1b4a385495b61cdeb2557ce79e97bdfd9a6116b60e2d78de565f20c9b66df271,sha256,95,malware,Known malware sample
+adf1802c277d870ab5c058f754b7ef542e7751f9afeacff4514f0939ac7685ab,sha256,95,malware,Known malware sample
+43757851544b2a8bbc1860e595313acb224904e70f881438f55657c5a3e155c2,sha256,95,malware,Known malware sample
+8285abf65f27a5fd232d0581904ab49602454ccc1c29326893482614b9667d16,sha256,95,malware,Known malware sample
+fa5fc2453aa7692977eb9981c35c5046e9bad764b708ba274c6e17721130e392,sha256,95,malware,Known malware sample
+e4fa1982c0b0d95b6681c3667aa23d5ae28910c6287657ead69337a24a6cd343,sha256,95,malware,Known malware sample
+ea77c72f1ab5c4109372c3c320b2f4e47e7429584e4508017c11925b39c3bf4d,sha256,95,malware,Known malware sample
+9d9cddc52d1ce0fa3d1a3b1abbbe62edefd90daee163b6d02a1b5e2483a60584,sha256,30,pua,Potentially unwanted application
+baacfbc3f99bed786ec55f7c35ca549d6db495d7551f7fb21412afadf1bc1b75,sha256,30,pua,Potentially unwanted application
+b103a7295559335cb14d34fcd1a94a1a287c178240c865c345f83d459fcccd8d,sha256,30,pua,Potentially unwanted application
+5cf29f4704dc6049f55766c742d29713ee44b762f62845467270266f3e553570,sha256,30,pua,Potentially unwanted application
+6697e89c36f5ebdabf563f654d47319befd71cd3cd343b85f01b8a751bb19a5d,sha256,30,pua,Potentially unwanted application
+3618deee0cef4ec577fb6739c0ee19507ee17b841879131b2f3b0d1254e11a2c,sha256,30,pua,Potentially unwanted application
+f8294f88243d387e346e8cdb49d57179573bba7d07c899a26e740334f7bb63b6,sha256,30,pua,Potentially unwanted application
+36f63e46a3594c95ae48750f919edfc84ef551dae5a9c66958923fd8f619be94,sha256,30,pua,Potentially unwanted application
+9b85072177f982961a01911ec61c67186e973817334b487acdb85b027a1ad462,sha256,30,pua,Potentially unwanted application
+cbcfcbfb60dd8837efe19f78c967ac2b695af4b38fc16b288e93c7ba914a9776,sha256,30,pua,Potentially unwanted application

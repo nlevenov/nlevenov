@@ -1,0 +1,5 @@
+# Example plain-text list. Replace with a current export, e.g. from
+# https://check.torproject.org/torbulkexitlist
+198.51.100.66
+198.51.100.67
+198.51.100.68

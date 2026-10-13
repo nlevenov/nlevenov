@@ -1,0 +1,119 @@
+# Triage rules. Every matching rule adds its score to the risk score (negative
+# values push known noise down). Available fields:
+#
+#   source alert_type signature severity src_ip dst_ip src_port dst_port
+#   protocol hostname username domain url file_hash occurrences
+#   src_internal dst_internal sensitive_port hour weekday off_hours
+#   intel_score intel_hits intel_providers intel_tags
+#   asset_criticality asset_name asset_tags privileged_user
+#
+# Operators: eq ne gt gte lt lte in not_in contains not_contains regex
+#            cidr not_cidr exists
+
+rules:
+  # ---------------------------------------------------------------- escalate
+  - id: R001
+    name: High-confidence threat intel match
+    conditions:
+      - {field: intel_score, op: gte, value: 80}
+    score: 10
+    tags: [intel-match]
+
+  - id: R002
+    name: Indicator confirmed by multiple intel sources
+    conditions:
+      - {field: intel_providers, op: gte, value: 2}
+    score: 5
+
+  - id: R003
+    name: Known-bad indicator touching a critical asset
+    conditions:
+      - {field: intel_score, op: gte, value: 60}
+      - {field: asset_criticality, op: gte, value: 4}
+    score: 10
+    tags: [escalate]
+
+  - id: R004
+    name: Sustained brute force (10+ attempts in window)
+    conditions:
+      - {field: alert_type, op: eq, value: Brute Force}
+      - {field: occurrences, op: gte, value: 10}
+    score: 15
+    tags: [brute-force-burst]
+
+  - id: R005
+    name: Brute force against a privileged account
+    conditions:
+      - {field: alert_type, op: eq, value: Brute Force}
+      - {field: privileged_user, op: eq, value: true}
+    score: 8
+
+  - id: R006
+    name: Successful login from a blocklisted address
+    conditions:
+      - {field: alert_type, op: eq, value: Authentication}
+      - {field: intel_score, op: gte, value: 50}
+    score: 40
+    set_type: Account Compromise
+    tags: [escalate, possible-compromise]
+
+  - id: R007
+    name: Credential dumping tool or LSASS access
+    conditions:
+      - {field: signature, op: regex, value: "mimikatz|lsass|credential dump"}
+    score: 20
+    tags: [credential-access]
+
+  - id: R008
+    name: Ransomware behaviour
+    conditions:
+      - {field: alert_type, op: eq, value: Ransomware}
+    score: 25
+    tags: [escalate]
+
+  - id: R009
+    name: Internal host talking to known C2 infrastructure
+    conditions:
+      - {field: src_internal, op: eq, value: true}
+      - {field: intel_tags, op: contains, value: c2}
+    score: 10
+    tags: [c2]
+
+  - id: R010
+    name: External exploit attempt against internet-facing asset
+    conditions:
+      - {field: alert_type, op: eq, value: Exploit Attempt}
+      - {field: src_internal, op: eq, value: false}
+      - {field: asset_tags, op: contains, value: internet-facing}
+    score: 5
+
+  - id: R011
+    name: Privilege change outside business hours
+    conditions:
+      - {field: alert_type, op: eq, value: Privilege Escalation}
+      - {field: off_hours, op: eq, value: true}
+    score: 10
+
+  # ------------------------------------------------------------- de-escalate
+  - id: R100
+    name: Approved internal vulnerability scanner
+    conditions:
+      - {field: src_ip, op: cidr, value: [10.0.5.5/32]}
+      - {field: alert_type, op: eq, value: Port Scan}
+    score: -30
+    auto_close: true
+    tags: [approved-scanner]
+
+  - id: R101
+    name: Potentially unwanted application (adware / riskware)
+    conditions:
+      - {field: signature, op: regex, value: "\\bPUA\\b|adware|riskware|toolbar|unwanted"}
+    score: -15
+    tags: [pua]
+
+  - id: R102
+    name: Low-impact policy violation
+    conditions:
+      - {field: alert_type, op: eq, value: Policy Violation}
+      - {field: intel_score, op: lt, value: 50}
+    score: -5

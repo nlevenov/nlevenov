@@ -1,0 +1,22 @@
+Oct 12 13:41:01 jump01 sshd[20400]: Failed password for root from 203.0.113.42 port 50100 ssh2
+Oct 12 13:41:04 jump01 sshd[20401]: Failed password for invalid user admin from 203.0.113.42 port 50107 ssh2
+Oct 12 13:41:07 jump01 sshd[20402]: Failed password for invalid user oracle from 203.0.113.42 port 50114 ssh2
+Oct 12 13:41:10 jump01 sshd[20403]: Failed password for invalid user ubuntu from 203.0.113.42 port 50121 ssh2
+Oct 12 13:41:13 jump01 sshd[20404]: Failed password for invalid user test from 203.0.113.42 port 50128 ssh2
+Oct 12 13:41:16 jump01 sshd[20405]: Failed password for root from 203.0.113.42 port 50135 ssh2
+Oct 12 13:41:17 jump01 sshd[20390]: Accepted publickey for operator from 10.0.10.21 port 51522 ssh2
+Oct 12 13:41:19 jump01 sshd[20406]: Failed password for root from 203.0.113.42 port 50142 ssh2
+Oct 12 13:41:22 jump01 sshd[20407]: Failed password for invalid user admin from 203.0.113.42 port 50149 ssh2
+Oct 12 13:41:25 jump01 sshd[20408]: Failed password for invalid user oracle from 203.0.113.42 port 50156 ssh2
+Oct 12 13:41:28 jump01 sshd[20409]: Failed password for invalid user ubuntu from 203.0.113.42 port 50163 ssh2
+Oct 12 13:41:31 jump01 sshd[20410]: Failed password for invalid user test from 203.0.113.42 port 50170 ssh2
+Oct 12 13:41:34 jump01 sshd[20411]: Failed password for root from 203.0.113.42 port 50177 ssh2
+Oct 12 13:41:37 jump01 sshd[20412]: Failed password for root from 203.0.113.42 port 50184 ssh2
+Oct 12 13:41:40 jump01 sshd[20413]: Failed password for invalid user admin from 203.0.113.42 port 50191 ssh2
+Oct 12 13:41:43 jump01 sshd[20414]: Failed password for invalid user oracle from 203.0.113.42 port 50198 ssh2
+Oct 12 13:41:46 jump01 sshd[20415]: Failed password for invalid user ubuntu from 203.0.113.42 port 50205 ssh2
+Oct 12 13:41:49 jump01 sshd[20416]: Failed password for invalid user test from 203.0.113.42 port 50212 ssh2
+Oct 12 13:41:52 jump01 sshd[20417]: Failed password for root from 203.0.113.42 port 50219 ssh2
+Oct 12 13:42:58 jump01 sshd[20431]: Accepted password for root from 203.0.113.42 port 50401 ssh2
+Oct 12 13:50:02 jump01 sshd[20460]: Failed password for jsmith from 10.0.10.35 port 53321 ssh2
+Oct 12 13:50:09 jump01 sshd[20461]: Connection closed by 10.0.10.35 port 53321 [preauth]
