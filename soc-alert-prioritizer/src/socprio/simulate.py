@@ -200,7 +200,8 @@ SCENARIOS = [
 def generate(count: int, seed: int = 1337, end: datetime | None = None,
              hours: int = 24) -> list[dict[str, Any]]:
     """Return ``count`` generic-JSON alert records, each with a ``label`` field."""
-    rng = random.Random(seed)
+    # seeded PRNG on purpose: datasets must be reproducible (not used for crypto)
+    rng = random.Random(seed)  # nosec B311
     end = end or datetime.now(timezone.utc)
     start = end - timedelta(hours=hours)
     weights = [s.weight for s in SCENARIOS]

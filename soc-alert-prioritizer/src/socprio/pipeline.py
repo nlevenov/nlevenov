@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -47,13 +48,17 @@ class Pipeline:
         self.classifier = classifier
         self.notifier = notifier
         self.window = timedelta(minutes=settings.dedup_window_minutes)
+        # Concurrent batches (API workers, watch mode) would otherwise race on
+        # the dedup lookup and create the same alert twice.
+        self._lock = threading.Lock()
 
     @classmethod
     def from_settings(cls, settings: Settings, store: AlertStore | None = None,
-                      dashboard_url: str = "") -> Pipeline:
+                      dashboard_url: str = "", load_model: bool = True) -> Pipeline:
         scope = NetworkScope(settings.internal_networks)
-        classifier = AlertClassifier.load(settings.model_path, scope)
-        if classifier is None:
+        classifier = AlertClassifier.load(settings.model_path, scope,
+                                          settings.model_signing_key) if load_model else None
+        if classifier is None and load_model:
             log.info("no trained model at %s - scoring without the ML factor",
                      settings.model_path)
         return cls(
@@ -67,11 +72,16 @@ class Pipeline:
         )
 
     def reload_model(self) -> bool:
-        self.classifier = AlertClassifier.load(self.settings.model_path, self.enricher.scope)
+        self.classifier = AlertClassifier.load(self.settings.model_path, self.enricher.scope,
+                                               self.settings.model_signing_key)
         return self.classifier is not None
 
     # ------------------------------------------------------------------ run
     def process(self, incoming: Iterable[Alert]) -> BatchResult:
+        with self._lock:
+            return self._process(incoming)
+
+    def _process(self, incoming: Iterable[Alert]) -> BatchResult:
         result = BatchResult()
         batch: dict[str, Alert] = {}            # fingerprint -> alert being built
         previous: dict[str, Priority | None] = {}
@@ -109,12 +119,16 @@ class Pipeline:
             self.scorer.score(alert, adjustments[alert.id])
             self.store.save(alert)
             result.by_priority[alert.priority.value] += 1
-            if self.notifier and self.notifier.should_notify(alert, previous[alert.fingerprint]) \
-                    and self.notifier.send(alert):
+            if self.notifier and self.notifier.should_notify(alert, previous[alert.fingerprint]):
+                self.notifier.submit(alert)
                 result.notified += 1
 
         result.alerts = sorted(alerts, key=lambda a: a.risk_score, reverse=True)
         return result
+
+    def close(self) -> None:
+        if self.notifier:
+            self.notifier.close()
 
     @staticmethod
     def _merge(target: Alert, repeat: Alert) -> None:

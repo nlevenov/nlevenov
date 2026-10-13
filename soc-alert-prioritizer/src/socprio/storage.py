@@ -65,6 +65,26 @@ _SORTS = {
     "oldest": "last_seen ASC",
 }
 OPEN_STATUSES = (Status.NEW.value, Status.INVESTIGATING.value, Status.MONITORING.value)
+_COLUMNS = (
+    "id", "fingerprint", "timestamp", "first_seen", "last_seen", "occurrences", "source",
+    "alert_type", "signature", "severity", "src_ip", "dst_ip", "src_port", "dst_port",
+    "protocol", "hostname", "username", "domain", "url", "file_hash", "ml_probability",
+    "risk_score", "priority", "status", "verdict", "notes", "intel", "asset", "rule_hits",
+    "tags", "score_breakdown", "raw", "updated_at",
+)
+_INSERT_SQL = (
+    f"INSERT OR REPLACE INTO alerts ({', '.join(_COLUMNS)}) "
+    f"VALUES ({', '.join(':' + c for c in _COLUMNS)})"
+)
+_UPDATABLE = {"status", "verdict", "notes", "updated_at"}
+# Repeats merge into open alerts and into alerts a rule auto-closed, never
+# into alerts an analyst closed - new activity after a decision is new.
+_DUPLICATE_SQL = (
+    "SELECT * FROM alerts WHERE fingerprint = ? AND last_seen >= ? "
+    "AND (status IN (?, ?, ?) "
+    "     OR (status = 'closed' AND verdict IS NULL AND tags LIKE '%auto-closed%')) "
+    "ORDER BY last_seen DESC LIMIT 1"
+)
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -100,19 +120,13 @@ class AlertStore:
     # ----------------------------------------------------------- write path
     def save(self, alert: Alert) -> None:
         row = self._to_row(alert)
-        columns = ", ".join(row)
-        placeholders = ", ".join(f":{c}" for c in row)
         with self._tx() as conn:
-            conn.execute(f"INSERT OR REPLACE INTO alerts ({columns}) VALUES ({placeholders})", row)
+            conn.execute(_INSERT_SQL, row)
 
     def find_recent_duplicate(self, fingerprint: str, since: datetime) -> Alert | None:
         with self._lock:
             row = self._conn.execute(
-                "SELECT * FROM alerts WHERE fingerprint = ? AND last_seen >= ? "
-                f"AND (status IN ({','.join('?' * len(OPEN_STATUSES))}) "
-                "     OR (status = 'closed' AND verdict IS NULL AND tags LIKE '%auto-closed%')) "
-                "ORDER BY last_seen DESC LIMIT 1",
-                (fingerprint, _iso(since), *OPEN_STATUSES),
+                _DUPLICATE_SQL, (fingerprint, _iso(since), *OPEN_STATUSES),
             ).fetchone()
         return self._from_row(row) if row else None
 
@@ -127,9 +141,10 @@ class AlertStore:
             changes["notes"] = notes
         if changes:
             changes["updated_at"] = _iso(datetime.now(timezone.utc))
-            assignments = ", ".join(f"{k} = :{k}" for k in changes)
+            # column names come from the fixed set above, values are bound
+            assignments = ", ".join(f"{k} = :{k}" for k in changes if k in _UPDATABLE)
             with self._tx() as conn:
-                conn.execute(f"UPDATE alerts SET {assignments} WHERE id = :id",
+                conn.execute(f"UPDATE alerts SET {assignments} WHERE id = :id",  # nosec B608
                              {**changes, "id": alert_id})
         return self.get(alert_id)
 
@@ -141,21 +156,27 @@ class AlertStore:
 
     def query(self, *, priority: list[str] | None = None, status: list[str] | None = None,
               alert_type: str | None = None, search: str | None = None,
-              since: datetime | None = None, sort: str = "risk", limit: int = 100,
-              offset: int = 0) -> tuple[list[Alert], int]:
-        where, params = self._filters(priority, status, alert_type, search, since)
+              src_ip: str | None = None, since: datetime | None = None, sort: str = "risk",
+              limit: int = 100, offset: int = 0) -> tuple[list[Alert], int]:
+        where, params = self._filters(priority, status, alert_type, search, src_ip, since)
         order = _SORTS.get(sort, _SORTS["risk"])
+        # WHERE is built from fixed clauses with bound parameters, ORDER BY
+        # from a whitelist - no user input is interpolated.
         with self._lock:
-            total = self._conn.execute(f"SELECT COUNT(*) FROM alerts {where}", params).fetchone()[0]
+            total = self._conn.execute(
+                f"SELECT COUNT(*) FROM alerts {where}", params).fetchone()[0]  # nosec B608
             rows = self._conn.execute(
-                f"SELECT * FROM alerts {where} ORDER BY {order} LIMIT ? OFFSET ?",
+                f"SELECT * FROM alerts {where} ORDER BY {order} LIMIT ? OFFSET ?",  # nosec B608
                 (*params, limit, offset),
             ).fetchall()
         return [self._from_row(r) for r in rows], total
 
     @staticmethod
-    def _filters(priority, status, alert_type, search, since) -> tuple[str, list[Any]]:
+    def _filters(priority, status, alert_type, search, src_ip, since) -> tuple[str, list[Any]]:
         clauses, params = [], []
+        if src_ip:
+            clauses.append("src_ip = ?")
+            params.append(src_ip)
         if priority:
             clauses.append(f"priority IN ({','.join('?' * len(priority))})")
             params += priority
@@ -169,10 +190,11 @@ class AlertStore:
             clauses.append("last_seen >= ?")
             params.append(_iso(since))
         if search:
-            like = f"%{search}%"
-            clauses.append("(signature LIKE ? OR src_ip LIKE ? OR dst_ip LIKE ? OR hostname LIKE ?"
-                           " OR username LIKE ? OR domain LIKE ? OR id LIKE ?)")
-            params += [like] * 7
+            escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{escaped}%"
+            columns = ("signature", "src_ip", "dst_ip", "hostname", "username", "domain", "id")
+            clauses.append("(" + " OR ".join(f"{c} LIKE ? ESCAPE '\\'" for c in columns) + ")")
+            params += [like] * len(columns)
         return ("WHERE " + " AND ".join(clauses)) if clauses else "", params
 
     def labelled(self) -> tuple[list[Alert], list[bool]]:
