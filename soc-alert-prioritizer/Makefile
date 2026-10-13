@@ -1,4 +1,4 @@
-.PHONY: install dev test lint demo serve evaluate docker clean
+.PHONY: install dev test lint security demo serve evaluate docker clean
 
 install:
 	pip install .
@@ -11,6 +11,10 @@ test:
 
 lint:
 	ruff check src tests
+
+security:
+	bandit -q -r src
+	pip-audit -r requirements.txt
 
 demo:
 	socprio demo
@@ -26,5 +30,5 @@ docker:
 	docker compose up --build
 
 clean:
-	rm -rf var reports models/*.joblib .pytest_cache .ruff_cache
+	rm -rf var reports models/*.joblib models/*.sig .pytest_cache .ruff_cache
 	find . -name __pycache__ -type d -prune -exec rm -rf {} +

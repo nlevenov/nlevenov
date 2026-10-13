@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.4"]
+dev = ["pytest>=8.0", "ruff>=0.4", "bandit>=1.7", "pip-audit>=2.7"]
 
 [project.scripts]
 socprio = "socprio.cli:main"

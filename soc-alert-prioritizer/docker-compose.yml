@@ -3,15 +3,36 @@ services:
     build: .
     image: socprio:latest
     ports:
-      - "8000:8000"
-    env_file:
-      - path: .env
-        required: false
+      # published on localhost only - put a TLS reverse proxy in front for remote access
+      - "127.0.0.1:8000:8000"
+    environment:
+      SOCPRIO_API_KEY: ${SOCPRIO_API_KEY:?set SOCPRIO_API_KEY in .env (see .env.example)}
+      SOCPRIO_MODEL_KEY: ${SOCPRIO_MODEL_KEY:-}
+      SOCPRIO_WEBHOOK_URL: ${SOCPRIO_WEBHOOK_URL:-}
+      MISP_ENABLED: ${MISP_ENABLED:-false}
+      MISP_URL: ${MISP_URL:-}
+      MISP_API_KEY: ${MISP_API_KEY:-}
+      ABUSEIPDB_ENABLED: ${ABUSEIPDB_ENABLED:-false}
+      ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
+      VIRUSTOTAL_ENABLED: ${VIRUSTOTAL_ENABLED:-false}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      ELASTIC_URL: ${ELASTIC_URL:-http://elasticsearch:9200}
+      ELASTIC_INDEX: ${ELASTIC_INDEX:-alerts-*}
+      ELASTIC_USERNAME: ${ELASTIC_USERNAME:-}
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-}
     volumes:
       - socprio-data:/app/var
       - socprio-models:/app/models
       - ./config:/app/config:ro
       - ./feeds:/app/feeds:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    pids_limit: 256
     restart: unless-stopped
 
 volumes:
