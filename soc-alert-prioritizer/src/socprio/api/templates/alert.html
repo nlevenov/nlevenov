@@ -82,7 +82,7 @@
       <div class="table-wrap"><table>
         <tbody>
         {% for r in related %}
-          <tr class="clickable" onclick="location='/alerts/{{ r.id }}'">
+          <tr class="clickable" data-href="/alerts/{{ r.id | urlencode }}">
             <td>{{ r.last_seen.strftime('%m-%d %H:%M') }}</td>
             <td><span class="badge {{ r.priority.value }}">{{ r.priority.value }}</span></td>
             <td>{{ r.risk_score }}</td><td>{{ r.alert_type }}</td><td class="sig">{{ r.signature }}</td>
@@ -102,7 +102,7 @@
   <div class="grid" style="margin-top: 0">
     <section class="panel">
       <h2>Triage</h2>
-      <form id="triage" data-id="{{ alert.id }}">
+      <form id="triage" data-id="{{ alert.id }}" data-status="{{ alert.status.value }}">
         <div class="form-row">
           <select name="status" aria-label="Status">
             {% for s in statuses %}
@@ -116,12 +116,7 @@
             {% endfor %}
           </select>
         </div>
-        <textarea name="notes" placeholder="Analyst notes...">{{ alert.notes }}</textarea>
-        {% if api_key_required %}
-        <div class="form-row" style="margin-top: 8px">
-          <input type="text" name="api_key" placeholder="API key" autocomplete="off">
-        </div>
-        {% endif %}
+        <textarea name="notes" maxlength="5000" placeholder="Analyst notes...">{{ alert.notes }}</textarea>
         <div class="form-row" style="margin-top: 8px"><button class="primary" type="submit">Save</button></div>
       </form>
       <p class="muted">Verdicts are used as training labels the next time the model is retrained.</p>

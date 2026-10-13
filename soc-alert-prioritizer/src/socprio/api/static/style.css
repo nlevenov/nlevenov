@@ -25,6 +25,8 @@ header.top {
   padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--panel);
   position: sticky; top: 0; z-index: 10;
 }
+.brand { color: inherit; text-decoration: none; }
+.brand:hover { text-decoration: none; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .3px; }
 .brand svg { width: 26px; height: 26px; }
 .brand small { color: var(--muted); font-weight: 400; margin-left: 4px; }
@@ -132,3 +134,8 @@ pre.raw { background: var(--bg); border: 1px solid var(--border); border-radius:
 .toast { position: fixed; right: 20px; bottom: 20px; padding: 10px 16px; border-radius: 8px;
   background: var(--panel-2); border: 1px solid var(--border); opacity: 0; transition: opacity .2s; }
 .toast.show { opacity: 1; }
+
+.login { max-width: 380px; margin: 12vh auto 0; }
+.login form { display: grid; gap: 10px; }
+.login input { width: 100%; }
+.error { color: var(--critical); margin: 0; }

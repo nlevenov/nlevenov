@@ -10,11 +10,16 @@
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="/" style="color: inherit; text-decoration: none">
+  <a class="brand" href="/">
     <img src="{{ url_for('static', path='logo.svg') }}" alt="" width="26" height="26">
     SOC Alert Prioritizer
   </a>
-  <div class="controls">{% block controls %}{% endblock %}</div>
+  <div class="controls">
+    {% block controls %}{% endblock %}
+    {% if auth_enabled and request.url.path != "/login" %}
+    <form method="post" action="/logout"><button type="submit">Sign out</button></form>
+    {% endif %}
+  </div>
 </header>
 <main>
 {% block content %}{% endblock %}

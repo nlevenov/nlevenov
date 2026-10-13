@@ -86,6 +86,12 @@ class Settings:
     )
     dedup_window_minutes: int = 30
     api_key: str = ""
+    # HMAC key for the model file. Loading a joblib file executes code, so a
+    # model whose signature does not verify is refused.
+    model_signing_key: str = ""
+    # Host headers the web app answers to. Empty = loopback only without an
+    # API key, any host with one. Set it when serving behind a proxy.
+    allowed_hosts: list[str] = field(default_factory=list)
     scoring: ScoringSettings = field(default_factory=ScoringSettings)
     intel: IntelSettings = field(default_factory=IntelSettings)
     notify: NotifySettings = field(default_factory=NotifySettings)

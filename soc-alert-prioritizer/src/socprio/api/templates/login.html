@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Sign in - SOC Alert Prioritizer{% endblock %}
+{% block content %}
+<section class="panel login">
+  <h2>Sign in</h2>
+  <form method="post" action="/login" autocomplete="off">
+    <label for="api_key" class="muted">API key</label>
+    <input type="password" id="api_key" name="api_key" required autofocus>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <button class="primary" type="submit">Sign in</button>
+  </form>
+  <p class="muted">Sessions expire after 12 hours.</p>
+</section>
+{% endblock %}

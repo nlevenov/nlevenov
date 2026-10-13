@@ -17,8 +17,18 @@ internal_networks:
 # window are merged into one alert with an occurrence counter.
 dedup_window_minutes: 30
 
-# Required as X-API-Key on write endpoints when set.
+# Protects the dashboard and API (X-API-Key header or /login). Required when
+# serving on anything other than localhost. Generate one with:
+#   python -c "import secrets; print(secrets.token_urlsafe(32))"
 api_key: ${SOCPRIO_API_KEY:-}
+
+# Host names the web app answers to, e.g. [soc.example.internal]. Leave empty
+# for localhost-only without an API key, or any host with one.
+allowed_hosts: []
+
+# Signs the trained model file (HMAC-SHA256). Loading a model executes code,
+# so tampered or unsigned files are rejected when this is set.
+model_signing_key: ${SOCPRIO_MODEL_KEY:-}
 
 scoring:
   # base score = weighted blend of these factors (re-normalized when the ML

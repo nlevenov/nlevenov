@@ -28,7 +28,11 @@
   });
 
   async function fetchJson(url) {
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "same-origin" });
+    if (response.status === 401) {
+      window.location = "/login";  // session expired
+      throw new Error("not authenticated");
+    }
     if (!response.ok) throw new Error(`${url}: ${response.status}`);
     return response.json();
   }
@@ -59,15 +63,16 @@
     $("top-sources").innerHTML = stats.top_sources.length
       ? stats.top_sources.map((s) => `
           <tr class="clickable" data-search="${escapeHtml(s.src_ip)}">
-            <td class="mono">${escapeHtml(s.src_ip)}</td><td>${s.alerts}</td>
-            <td>${s.max_score}</td></tr>`).join("")
+            <td class="mono">${escapeHtml(s.src_ip)}</td><td>${Number(s.alerts) || 0}</td>
+            <td>${Number(s.max_score) || 0}</td></tr>`).join("")
       : `<tr><td colspan="3" class="empty">No data</td></tr>`;
   }
 
   function scoreCell(alert) {
-    const color = COLORS[alert.priority];
-    return `<div class="score"><div class="bar"><span style="width:${alert.risk_score}%;
-      background:${color}"></span></div><b>${alert.risk_score}</b></div>`;
+    const color = COLORS[alert.priority] ?? "#8b93a7";
+    const score = Math.max(0, Math.min(100, Number(alert.risk_score) || 0));
+    return `<div class="score"><div class="bar"><span style="width:${score}%;
+      background:${color}"></span></div><b>${score}</b></div>`;
   }
 
   async function loadAlerts() {
@@ -86,13 +91,14 @@
       ? page.items.map((a) => `
         <tr class="clickable" data-id="${escapeHtml(a.id)}">
           <td>${formatTime(a.last_seen)}</td>
-          <td><span class="badge ${a.priority}">${a.priority}</span></td>
+          <td><span class="badge ${PRIORITIES.includes(a.priority) ? a.priority : ""}">
+            ${escapeHtml(a.priority)}</span></td>
           <td>${scoreCell(a)}</td>
           <td>${escapeHtml(a.alert_type)}</td>
           <td class="sig" title="${escapeHtml(a.signature)}">${escapeHtml(a.signature)}</td>
           <td class="mono">${escapeHtml(a.src_ip ?? "-")}</td>
           <td class="mono">${escapeHtml(a.dst_ip ?? "-")}</td>
-          <td>${a.occurrences}</td>
+          <td>${Number(a.occurrences) || 0}</td>
           <td class="status">${escapeHtml(a.status.replace("_", " "))}</td>
         </tr>`).join("")
       : `<tr><td colspan="9" class="empty">No alerts match the current filters.</td></tr>`;
