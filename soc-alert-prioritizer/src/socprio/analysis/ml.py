@@ -6,8 +6,13 @@ positive becomes a training sample, so prioritization improves with use.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import io
+import json
 import logging
 import math
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -146,17 +151,50 @@ class AlertClassifier:
                 for i in order]
 
     # ------------------------------------------------------------ persistence
-    def save(self, path: str | Path) -> None:
+    # joblib files are pickles: loading one runs arbitrary code. Every saved
+    # model gets a detached signature and nothing is unpickled unless it
+    # verifies. With a signing key the signature is an HMAC, which also stops
+    # an attacker who can write to the model directory; without one it is a
+    # plain SHA-256 that only catches corruption and accidental swaps.
+
+    @staticmethod
+    def _digest(data: bytes, signing_key: str) -> tuple[str, str]:
+        if signing_key:
+            return "hmac-sha256", hmac.new(signing_key.encode(), data, hashlib.sha256).hexdigest()
+        return "sha256", hashlib.sha256(data).hexdigest()
+
+    def save(self, path: str | Path, signing_key: str = "") -> None:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump({"pipeline": self.pipeline, "metadata": self.metadata}, path)
+        buffer = io.BytesIO()
+        joblib.dump({"pipeline": self.pipeline, "metadata": self.metadata}, buffer)
+        data = buffer.getvalue()
+        algorithm, digest = self._digest(data, signing_key)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_bytes(data)
+        os.replace(tmp, path)  # atomic: a running server never sees half a file
+        _signature_path(path).write_text(
+            json.dumps({"algorithm": algorithm, "digest": digest}), encoding="utf-8")
 
     @classmethod
-    def load(cls, path: str | Path, scope: NetworkScope) -> AlertClassifier | None:
+    def load(cls, path: str | Path, scope: NetworkScope,
+             signing_key: str = "") -> AlertClassifier | None:
         path = Path(path)
         if not path.exists():
             return None
-        bundle = joblib.load(path)
+        data = path.read_bytes()
+        try:
+            signature = json.loads(_signature_path(path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            log.error("model %s has no valid signature file; refusing to load it", path)
+            return None
+        expected_algorithm, expected = cls._digest(data, signing_key)
+        if signature.get("algorithm") != expected_algorithm or not hmac.compare_digest(
+                str(signature.get("digest", "")), expected):
+            log.error("signature check failed for model %s; refusing to load it", path)
+            return None
+
+        bundle = joblib.load(io.BytesIO(data))
         metadata = bundle.get("metadata", {})
         if metadata.get("feature_version") != FEATURE_VERSION:
             log.warning("model at %s was built with an older feature set; retrain it", path)
@@ -165,3 +203,7 @@ class AlertClassifier:
             log.warning("model trained with scikit-learn %s, running %s",
                         metadata.get("sklearn_version"), sklearn.__version__)
         return cls(bundle["pipeline"], scope, metadata)
+
+
+def _signature_path(path: Path) -> Path:
+    return path.with_suffix(path.suffix + ".sig")

@@ -14,4 +14,6 @@ var/
 *.db
 *.db-journal
 models/*.joblib
+models/*.sig
+models/*.tmp
 reports/

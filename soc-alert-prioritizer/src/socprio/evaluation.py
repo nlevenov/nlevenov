@@ -25,7 +25,7 @@ def label_of(alert: Alert) -> bool | None:
 
 
 def _scratch_pipeline(settings: Settings, classifier: AlertClassifier | None) -> Pipeline:
-    pipeline = Pipeline.from_settings(settings, store=AlertStore(":memory:"))
+    pipeline = Pipeline.from_settings(settings, store=AlertStore(":memory:"), load_model=False)
     pipeline.classifier = classifier
     pipeline.notifier = None
     return pipeline
