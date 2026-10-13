@@ -1,0 +1,19 @@
+services:
+  socprio:
+    build: .
+    image: socprio:latest
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - socprio-data:/app/var
+      - socprio-models:/app/models
+      - ./config:/app/config:ro
+      - ./feeds:/app/feeds:ro
+    restart: unless-stopped
+
+volumes:
+  socprio-data:
+  socprio-models:
