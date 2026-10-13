@@ -60,6 +60,11 @@ does it automatically for every alert.
 - **Research tooling** - synthetic labelled data generator, CIC-IDS2017/2018
   loader and a benchmark comparing rule-based and ML-based prioritization
   (precision, recall, F1, precision@k).
+- **Secure by default** - log content is treated as hostile: validated,
+  bounded and escaped everywhere it is rendered or exported. API key or
+  signed-session authentication, CSRF and DNS-rebinding protection, strict
+  CSP, signed model files and a hardened container. See
+  [SECURITY.md](SECURITY.md).
 
 ## How it works
 
@@ -118,9 +123,14 @@ socprio demo          # trains a model on synthetic history, ingests a day of
 Or with Docker:
 
 ```bash
-cp .env.example .env  # optional: API keys, webhook
+cp .env.example .env
+# set SOCPRIO_API_KEY (and SOCPRIO_MODEL_KEY) - the container refuses to start without a key
 docker compose up --build
 ```
+
+Without an API key the server only listens on localhost. To expose it, set a
+key, put a TLS reverse proxy in front and start it with
+`socprio serve --host 0.0.0.0 --behind-proxy --public-url https://soc.example.internal`.
 
 ## Usage
 
@@ -172,8 +182,9 @@ an account compromise by rule `R006`.
 
 ## REST API
 
-Interactive docs at `/docs` (OpenAPI). Write endpoints require the
-`X-API-Key` header when `SOCPRIO_API_KEY` is set.
+Interactive docs at `/docs` (OpenAPI). When `SOCPRIO_API_KEY` is set every
+endpoint except `/health` requires it, either as an `X-API-Key` header
+(scripts, SIEM forwarders) or through a browser session from `/login`.
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -257,6 +268,7 @@ src/socprio/
   evaluation.py training helpers and strategy benchmark
   simulate.py   labelled synthetic alert generator
   cli.py        command line interface
+  api/security.py  authentication, sessions, CSRF, security headers
 config/         settings, rules, asset inventory
 feeds/          local threat intelligence
 data/sample/    example logs in every supported format
@@ -269,6 +281,7 @@ tests/          pytest suite
 make dev      # editable install with test tools
 make test     # pytest
 make lint     # ruff
+make security # bandit + pip-audit
 ```
 
 ## Roadmap

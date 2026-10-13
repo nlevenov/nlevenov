@@ -87,11 +87,18 @@ Nested structures (intel hits, asset, breakdown, raw event) are stored as
 JSON columns. Statistics for the dashboard and reports are computed with
 pandas from a narrow projection of the table.
 
-## Security notes
+## Security
 
-* Secrets are only read from environment variables via `${VAR}` expansion.
-* Write endpoints require `X-API-Key` when an API key is configured; the
-  comparison is constant-time.
-* All dynamic values in the dashboard are HTML-escaped; Jinja2 autoescaping
-  is on for server-rendered pages.
-* The container runs as an unprivileged user.
+The full threat model is in [SECURITY.md](../SECURITY.md). In short:
+
+* Alert fields are validated when the `Alert` model is built (IP and port
+  syntax, length limits, control characters, clock skew) and escaped
+  wherever they are rendered: Jinja2 autoescaping, `escapeHtml` in the
+  dashboard JavaScript, `html.escape` in the report, formula neutralization
+  in CSV exports, markup escaping in webhook messages.
+* [`api/security.py`](../src/socprio/api/security.py) implements API-key and
+  HMAC-signed session authentication, a failed-login limiter, the `Origin`
+  check that blocks CSRF, and a middleware that adds security headers and
+  caps request bodies at 10 MB.
+* Trained models are written atomically with a detached signature and only
+  unpickled after the signature verifies.
