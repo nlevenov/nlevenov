@@ -1,12 +1,12 @@
-# <p align="center"> ✨ NIKOLA LEVENOV ✨   AI SOFTWARE ARCHITECT 
+# <p align="center"> ✨ NIKOLA LEVENOV ✨   SOC Analyst  
 
 
-### <p align="center"> ◈ AI SOFTWARE ENGINEERING  <br> ◈ AUTONOMOUS SCALABLE INFRASTRUCTURES <br>◈ BUSINESS INTELLIGENCE  </p>
+### <p align="center"> ◈ Cloud & Network Engineering  <br> ◈ Cyber Security <br>◈ Software Engineering  </p>
 
 ---
 
 ### 🛡️ Executive Strategy
-I am an **AI Software Engineering** professional dedicated to architecting scalable, AI-native systems. I specialize in high-efficiency Python development, automated software lifecycles, and the strategic integration of large language models into enterprise workflows.
+I am an **SOC Analyst** professional dedicated to architecting scalable Cyber Security systems. I specialize in high-efficiency Python development, automated software algorithms, and the strategic integration of large language models into enterprise workflows.
 
 ---
 
@@ -30,16 +30,16 @@ I am an **AI Software Engineering** professional dedicated to architecting scala
 
 ### 🧭 Strategic Focus & Objectives
 
-* **🔳 Advanced Engineering:** Architecting Autonomous Systems, AI-driven infrastructure for enterprise-grade deployments..
-* **🧠 AAS/BS in AI Software Engineering/Computer Science:** Deepening expertise in algorithmic efficiency and neural integration.
-* **🎯 Performance Standard:** Maintaining a 4.0 academic and professional baseline in technical implementation.
-* **⏳ Operational Strategy:** Utilizing AI-assisted development (Copilot/Cursor) to minimize technical debt.
-* **🌐 Research Areas:** Human-centered AI design and scalable data modeling.
+* **🔳 Advanced Engineering:** Architecting Autonomous Systems, Cyber Security infrastructure for enterprise-grade deployments.
+* **🧠 BS in Cloud & Network Engineering:** Deepening expertise in Cyber Security, Clouds and Network algorithms.
+* **🎯 Performance Standard:** Maintaining the highest professional standard in technical implementation.
+* **⏳ Operational Strategy:** Utilizing a Python hand-written project workflow to minimize technical debt.
+* **🌐 Research Areas:** Network design and scalable data modeling.
 
 ---
 
 ### 🤝 Strategic Collaboration
-Focused on the future of autonomous systems and the deployment of high-impact AI solutions. Open to discussing technical innovations, neural architecture, and scalable business integrations.
+Focused on the future of autonomous systems and the deployment of high-impact Cyber Security solutions. Open to discussing technical innovations, neural architecture, and scalable business integrations.
 
 
 
